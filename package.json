@@ -1,0 +1,19 @@
+{
+  "name": "hyperstate",
+  "type": "module",
+  "main": "index.js",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest",
+    "corestore": "^7.4.5",
+    "deep-object-diff": "^1.1.9"
+  },
+  "peerDependencies": {
+    "typescript": "^5",
+    "holepunch-types": "github:Drache93/holepunch-types#main"
+  },
+  "dependencies": {
+    "hypercore": "^11.16.0",
+    "ready-resource": "^1.2.0"
+  }
+}
