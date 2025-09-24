@@ -1,8 +1,12 @@
 {
   "name": "hyperstate",
   "type": "module",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "private": true,
+  "scripts": {
+    "build": "tsc"
+  },
   "devDependencies": {
     "@types/bun": "latest",
     "corestore": "^7.4.5",

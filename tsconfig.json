@@ -4,12 +4,15 @@
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "target": "ES2022",
     "module": "ESNext",
+    "skipLibCheck": true,
+    "declaration": true,
+    "outDir": "dist",
     "allowSyntheticDefaultImports": true,
     "typeRoots": [
       "./node_modules/@types",
       "./node_modules/holepunch-types/@types"
     ]
   },
-  "include": ["*.ts"],
+  "include": ["index.ts"],
   "exclude": ["node_modules", "build", "dist"]
 }
