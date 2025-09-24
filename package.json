@@ -10,12 +10,16 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "test": "bun run test-runtime.ts",
+    "test:types": "bun tsc --noEmit test-types.ts",
+    "test:all": "bun run test:types && bun run test"
   },
   "devDependencies": {
     "@types/bun": "latest",
     "corestore": "^7.4.5",
-    "deep-object-diff": "^1.1.9"
+    "deep-object-diff": "^1.1.9",
+    "tsd": "^0.33.0"
   },
   "peerDependencies": {
     "typescript": "^5",

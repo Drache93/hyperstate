@@ -1,18 +1,27 @@
 {
   "compilerOptions": {
     // Environment setup & latest features
-    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "target": "ES2022",
     "module": "ESNext",
+    "moduleResolution": "bundler",
     "skipLibCheck": true,
     "declaration": true,
     "outDir": "dist",
     "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "useDefineForClassFields": false,
+    "strict": true,
+    "noImplicitAny": false,
+    "noImplicitReturns": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
     "typeRoots": [
       "./node_modules/@types",
       "./node_modules/holepunch-types/@types"
     ]
   },
-  "include": ["index.ts"],
+  "include": ["index.ts", "tests/*.ts", "demo.ts"],
   "exclude": ["node_modules", "build", "dist"]
 }

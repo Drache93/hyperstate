@@ -1,139 +1,167 @@
 import ReadyResource from "ready-resource";
 import Hypercore from "hypercore";
 
-// More sophisticated type definitions for better inference
-type MachineDefinition = {
-  initial: string;
-  context: Record<string, any>;
-  states: Record<string, StateDefinition>;
-};
-
-type StateDefinition = {
-  on: Record<string, TransitionDefinition>;
-};
-
-type TransitionDefinition = {
-  target: string;
-  action: (ctx: any, ...args: any[]) => void | Promise<void>;
-};
-
-// Extract context type from the actual machine definition
-type InferContext<T> = T extends { context: infer C } ? C : never;
-
-// Extract event names
-type EventNames<T> = T extends {
-  states: Record<string, { on: Record<infer E, any> }>;
-}
-  ? E
-  : never;
-
-// Create a machine with proper type inference
-export const createMachine = <
-  const TContext extends Record<string, any>,
-  const T extends {
-    initial: string;
-    context: TContext;
-    states: Record<
-      string,
-      {
-        on: Record<
-          string,
-          {
-            target: string;
-            action: (ctx: TContext, ...args: any[]) => void | Promise<void>;
-          }
-        >;
-      }
-    >;
-  },
->(
-  definition: T,
-): T & { __context: TContext } => {
-  return definition as T & { __context: TContext };
-};
-
-// Type-safe machine type that preserves context type
-type TypedMachine<TContext extends Record<string, any>> = {
-  initial: string;
-  context: TContext;
-  states: Record<
+// Core type definitions with proper generic constraints
+export type MachineConfig<
+  TContext extends Record<string, any> = Record<string, any>,
+  TStates extends Record<string, StateConfig<TContext>> = Record<
     string,
-    {
-      on: Record<
-        string,
-        {
-          target: string;
-          action: (ctx: TContext, ...args: any[]) => void | Promise<void>;
-        }
-      >;
-    }
-  >;
-  __context: TContext;
+    StateConfig<TContext>
+  >,
+> = {
+  initial: keyof TStates;
+  context: TContext;
+  states: TStates;
 };
 
-export class Hyperstate<T extends TypedMachine<any>> extends ReadyResource {
-  #core: Hypercore;
-  #machine: T;
-  #state: string;
-  #context: T["__context"];
+export type StateConfig<TContext extends Record<string, any>> = {
+  on: Record<string, TransitionConfig<TContext>>;
+};
+
+export type TransitionConfig<TContext extends Record<string, any>> = {
+  target: string;
+  action: (ctx: TContext, ...args: any[]) => void | Promise<void>;
+};
+
+// Type utilities for extracting information from machine definitions
+type ExtractContext<T> = T extends MachineConfig<infer C, any> ? C : never;
+
+type ExtractEvents<T> =
+  T extends MachineConfig<any, infer S>
+    ? S extends Record<string, { on: Record<infer E, any> }>
+      ? E
+      : never
+    : never;
+
+// Extract action parameter types for specific events
+type ExtractActionParams<T, E extends string> =
+  T extends MachineConfig<any, infer S>
+    ? {
+        [K in keyof S]: S[K] extends {
+          on: Record<E, { action: (ctx: any, ...args: infer P) => any }>;
+        }
+          ? P extends [infer First, ...any[]]
+            ? First
+            : undefined
+          : never;
+      }[keyof S]
+    : never;
+
+// Extract all action signatures from a machine
+type ExtractActionSignatures<T> =
+  T extends MachineConfig<any, infer S>
+    ? {
+        [K in ExtractEvents<T>]: ExtractActionParams<
+          T,
+          K extends string ? K : never
+        > extends never
+          ? undefined
+          : ExtractActionParams<T, K extends string ? K : never>;
+      }
+    : never;
+
+// Improved createMachine function with better type inference
+export function createMachine<
+  TContext extends Record<string, any>,
+  TStates extends Record<string, StateConfig<TContext>>,
+>(
+  config: MachineConfig<TContext, TStates> & {
+    initial: keyof TStates;
+    context: TContext;
+    states: TStates;
+  },
+): MachineConfig<TContext, TStates> {
+  return config;
+}
+
+// Utility function to infer action types and payloads
+export function inferActions<T extends MachineConfig<any, any>>(
+  machine: T,
+): ExtractActionSignatures<T> {
+  const result = {} as any;
+
+  // Collect all event names from all states
+  for (const stateName in machine.states) {
+    const state = machine.states[stateName];
+    for (const eventName in state.on) {
+      result[eventName] = undefined; // Placeholder for type inference
+    }
+  }
+
+  return result as ExtractActionSignatures<T>;
+}
+
+export class Hyperstate<
+  T extends MachineConfig<any, any>,
+> extends ReadyResource {
+  private _core: Hypercore;
+  private _machine: T;
+  private _state: string;
+  private _context: ExtractContext<T>;
 
   constructor(core: Hypercore, machine: T) {
     super();
-    this.#core = core;
-    this.#machine = machine;
-    this.#state = machine.initial;
-    this.#context = machine.context;
+    this._core = core;
+    this._machine = machine;
+    this._state = machine.initial as string;
+    this._context = machine.context;
   }
 
-  // Rest of implementation stays the same but with proper typing
-  override async _open() {
-    await this.#core.ready();
+  async _open() {
+    await this._core.ready();
 
-    if (this.#core.length > 0) {
-      const lastState: { state: string; context: T["__context"] } =
-        await this.#core.get(this.#core.length - 1);
-      this.#state = lastState.state;
-      this.#context = lastState.context;
+    if (this._core.length > 0) {
+      const lastState: { state: string; context: ExtractContext<T> } =
+        await this._core.get(this._core.length - 1);
+      this._state = lastState.state;
+      this._context = lastState.context;
     }
   }
 
-  override async _close() {
-    await this.#core.close();
+  async _close() {
+    await this._core.close();
   }
 
-  async action<E extends EventNames<T>>(
+  async action<E extends ExtractEvents<T>>(
     event: E,
-    value?: any, // You can make this more specific based on your needs
+    value?: ExtractActionParams<T, E extends string ? E : never>,
   ): Promise<void> {
-    const currentState = this.#machine.states[this.#state];
+    const currentState = this._machine.states[this._state];
     const transition = currentState?.on[event as string];
 
     if (transition) {
-      // Now ctx is properly typed as T['__context']!
-      await transition.action(this.#context, value);
-      await this.#core.append({
+      await transition.action(this._context, value);
+      await this._core.append({
         state: transition.target,
-        context: this.#context,
+        context: this._context,
       });
-      this.#state = transition.target;
+      this._state = transition.target;
     } else {
-      throw new Error(`Invalid action: ${event} for state ${this.#state}`);
+      throw new Error(
+        `Invalid action: ${String(event)} for state ${this._state}`,
+      );
     }
   }
 
-  get context(): T["__context"] {
-    return this.#context;
+  truncate(newLength: number) {
+    return this._core.truncate(newLength);
   }
 
   get state() {
-    return this.#state;
+    return this._state;
   }
 
-  truncate(newLength: number) {
-    return this.#core.truncate(newLength);
+  get context(): ExtractContext<T> {
+    return this._context;
   }
 
   get isEmpty() {
-    return this.#core.length === 0;
+    return this._core.length === 0;
+  }
+
+  // Helper method to get available actions for current state
+  getAvailableActions(): Array<ExtractEvents<T>> {
+    const currentState = this._machine.states[this._state];
+    return Object.keys(currentState?.on || {}) as Array<ExtractEvents<T>>;
   }
 }
