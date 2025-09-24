@@ -26,6 +26,8 @@ export type TransitionConfig<TContext extends Record<string, any>> = {
 // Type utilities for extracting information from machine definitions
 type ExtractContext<T> = T extends MachineConfig<infer C, any> ? C : never;
 
+type ExtractStates<T> = T extends MachineConfig<any, infer S> ? keyof S : never;
+
 type ExtractEvents<T> =
   T extends MachineConfig<any, infer S>
     ? S extends Record<string, { on: Record<infer E, any> }>
@@ -100,14 +102,14 @@ export class Hyperstate<
 > extends ReadyResource {
   private _core: Hypercore;
   private _machine: T;
-  private _state: string;
+  private _state: ExtractStates<T>;
   private _context: ExtractContext<T>;
 
   constructor(core: Hypercore, machine: T) {
     super();
     this._core = core;
     this._machine = machine;
-    this._state = machine.initial as string;
+    this._state = machine.initial as any;
     this._context = machine.context;
   }
 
@@ -115,7 +117,7 @@ export class Hyperstate<
     await this._core.ready();
 
     if (this._core.length > 0) {
-      const lastState: { state: string; context: ExtractContext<T> } =
+      const lastState: { state: ExtractStates<T>; context: ExtractContext<T> } =
         await this._core.get(this._core.length - 1);
       this._state = lastState.state;
       this._context = lastState.context;
@@ -129,7 +131,10 @@ export class Hyperstate<
   async action<E extends ExtractEvents<T>>(
     event: E,
     value?: ExtractActionParams<T, E extends string ? E : never>,
-  ): Promise<void> {
+  ): Promise<{
+    state: ExtractStates<T>;
+    context: ExtractContext<T>;
+  }> {
     const currentState = this._machine.states[this._state];
     const transition = currentState?.on[event as string];
 
@@ -139,10 +144,15 @@ export class Hyperstate<
         state: transition.target,
         context: this._context,
       });
-      this._state = transition.target;
+      this._state = transition.target as ExtractStates<T>;
+
+      return {
+        state: this._state,
+        context: this._context,
+      };
     } else {
       throw new Error(
-        `Invalid action: ${String(event)} for state ${this._state}`,
+        `Invalid action: ${String(event)} for state ${this._state as string}`,
       );
     }
   }
@@ -151,7 +161,7 @@ export class Hyperstate<
     return this._core.truncate(newLength);
   }
 
-  get state() {
+  get state(): ExtractStates<T> {
     return this._state;
   }
 

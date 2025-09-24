@@ -1,4 +1,4 @@
-import { createMachine, Hyperstate, inferActions } from "../index";
+import { createMachine, inferActions } from "../index";
 
 // Runtime test to verify everything works
 async function runTests() {

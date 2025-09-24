@@ -75,6 +75,8 @@ type TodoActions = Infer<typeof todoMachine>;
 
 // Function that safely works with the machine
 function createTodoHelper(hyperstate: Hyperstate<typeof todoMachine>) {
+  const currentState = hyperstate.state;
+
   return {
     addTodo: (text: string) => hyperstate.action("ADD_TODO", { text }),
 
