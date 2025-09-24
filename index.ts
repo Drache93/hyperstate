@@ -24,9 +24,11 @@ export type TransitionConfig<TContext extends Record<string, any>> = {
 };
 
 // Type utilities for extracting information from machine definitions
-type ExtractContext<T> = T extends MachineConfig<infer C, any> ? C : never;
+export type ExtractContext<T> =
+  T extends MachineConfig<infer C, any> ? C : never;
 
-type ExtractStates<T> = T extends MachineConfig<any, infer S> ? keyof S : never;
+export type ExtractStates<T> =
+  T extends MachineConfig<any, infer S> ? keyof S : never;
 
 type ExtractEvents<T> =
   T extends MachineConfig<any, infer S>
