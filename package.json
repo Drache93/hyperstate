@@ -1,9 +1,14 @@
 {
   "name": "hyperstate",
   "type": "module",
+  "version": "0.1.0",
+  "author": {
+    "name": "Dominic Cassidy",
+    "email": "dominic@cassidy.casa",
+    "url": "https://dominic.cassidy.casa"
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "private": true,
   "scripts": {
     "build": "tsc"
   },
