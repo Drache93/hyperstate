@@ -91,6 +91,10 @@ export function inferActions<T extends MachineConfig<any, any>>(
   return result as ExtractActionSignatures<T>;
 }
 
+export type Infer<T extends MachineConfig<any, any>> = ReturnType<
+  typeof inferActions<T>
+>;
+
 export class Hyperstate<
   T extends MachineConfig<any, any>,
 > extends ReadyResource {
