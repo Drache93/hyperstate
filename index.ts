@@ -106,6 +106,7 @@ export class Hyperstate<
   private _machine: T;
   private _state: ExtractStates<T>;
   private _context: ExtractContext<T>;
+  private _currentIndex: number | null = null;
 
   constructor(core: Hypercore, machine: T) {
     super();
@@ -141,12 +142,14 @@ export class Hyperstate<
     const transition = currentState?.on[event as string];
 
     if (transition) {
+      const oldState = structuredClone(this._context);
       await transition.action(this._context, value);
       await this._core.append({
         state: transition.target,
         context: this._context,
       });
       this._state = transition.target as ExtractStates<T>;
+      this.emit("stateChange", { newState: this._context, oldState });
 
       return {
         state: this._state,
@@ -156,6 +159,44 @@ export class Hyperstate<
       throw new Error(
         `Invalid action: ${String(event)} for state ${this._state as string}`,
       );
+    }
+  }
+
+  /*
+   * Move forward in the history
+   *
+   * Will replace the current state with the next state in the history.
+   */
+  async forward() {
+    const newIndex =
+      this._currentIndex === null
+        ? this._core.length - 2
+        : this._currentIndex + 1;
+
+    if (this._core.length > newIndex && newIndex < this._core.length) {
+      const nextState = await this._core.get(newIndex);
+      this._state = nextState.state;
+      this._context = nextState.context;
+      this._currentIndex = newIndex;
+    }
+  }
+
+  /*
+   * Move backward in the history.
+   *
+   * Will replace the current state with the previous state in the history.
+   */
+  async backward() {
+    const newIndex =
+      this._currentIndex === null
+        ? this._core.length - 2
+        : this._currentIndex - 1;
+
+    if (this._core.length > newIndex && newIndex >= 0) {
+      const lastState = await this._core.get(newIndex);
+      this._state = lastState.state;
+      this._context = lastState.context;
+      this._currentIndex = newIndex;
     }
   }
 

@@ -18,6 +18,7 @@ export function inferActions(machine) {
 export class Hyperstate extends ReadyResource {
     constructor(core, machine) {
         super();
+        this._currentIndex = null;
         this._core = core;
         this._machine = machine;
         this._state = machine.initial;
@@ -38,15 +39,53 @@ export class Hyperstate extends ReadyResource {
         const currentState = this._machine.states[this._state];
         const transition = currentState?.on[event];
         if (transition) {
+            const oldState = structuredClone(this._context);
             await transition.action(this._context, value);
             await this._core.append({
                 state: transition.target,
                 context: this._context,
             });
             this._state = transition.target;
+            this.emit("stateChange", { newState: this._context, oldState });
+            return {
+                state: this._state,
+                context: this._context,
+            };
         }
         else {
             throw new Error(`Invalid action: ${String(event)} for state ${this._state}`);
+        }
+    }
+    /*
+     * Move forward in the history
+     *
+     * Will replace the current state with the next state in the history.
+     */
+    async forward() {
+        const newIndex = this._currentIndex === null
+            ? this._core.length - 2
+            : this._currentIndex + 1;
+        if (this._core.length > newIndex && newIndex < this._core.length) {
+            const nextState = await this._core.get(newIndex);
+            this._state = nextState.state;
+            this._context = nextState.context;
+            this._currentIndex = newIndex;
+        }
+    }
+    /*
+     * Move backward in the history.
+     *
+     * Will replace the current state with the previous state in the history.
+     */
+    async backward() {
+        const newIndex = this._currentIndex === null
+            ? this._core.length - 2
+            : this._currentIndex - 1;
+        if (this._core.length > newIndex && newIndex >= 0) {
+            const lastState = await this._core.get(newIndex);
+            this._state = lastState.state;
+            this._context = lastState.context;
+            this._currentIndex = newIndex;
         }
     }
     truncate(newLength) {

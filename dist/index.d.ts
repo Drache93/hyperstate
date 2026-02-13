@@ -12,7 +12,8 @@ export type TransitionConfig<TContext extends Record<string, any>> = {
     target: string;
     action: (ctx: TContext, ...args: any[]) => void | Promise<void>;
 };
-type ExtractContext<T> = T extends MachineConfig<infer C, any> ? C : never;
+export type ExtractContext<T> = T extends MachineConfig<infer C, any> ? C : never;
+export type ExtractStates<T> = T extends MachineConfig<any, infer S> ? keyof S : never;
 type ExtractEvents<T> = T extends MachineConfig<any, infer S> ? S extends Record<string, {
     on: Record<infer E, any>;
 }> ? E : never : never;
@@ -38,12 +39,18 @@ export declare class Hyperstate<T extends MachineConfig<any, any>> extends Ready
     private _machine;
     private _state;
     private _context;
+    private _currentIndex;
     constructor(core: Hypercore, machine: T);
     _open(): Promise<void>;
     _close(): Promise<void>;
-    action<E extends ExtractEvents<T>>(event: E, value?: ExtractActionParams<T, E extends string ? E : never>): Promise<void>;
+    action<E extends ExtractEvents<T>>(event: E, value?: ExtractActionParams<T, E extends string ? E : never>): Promise<{
+        state: ExtractStates<T>;
+        context: ExtractContext<T>;
+    }>;
+    forward(): Promise<void>;
+    backward(): Promise<void>;
     truncate(newLength: number): any;
-    get state(): string;
+    get state(): ExtractStates<T>;
     get context(): ExtractContext<T>;
     get isEmpty(): boolean;
     getAvailableActions(): Array<ExtractEvents<T>>;
