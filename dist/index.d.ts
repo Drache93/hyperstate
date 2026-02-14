@@ -34,13 +34,17 @@ export declare function createMachine<TContext extends Record<string, any>, TSta
 }): MachineConfig<TContext, TStates>;
 export declare function inferActions<T extends MachineConfig<any, any>>(machine: T): ExtractActionSignatures<T>;
 export type Infer<T extends MachineConfig<any, any>> = ReturnType<typeof inferActions<T>>;
+interface HyperstateOptions {
+    eager?: boolean;
+}
 export declare class Hyperstate<T extends MachineConfig<any, any>> extends ReadyResource {
     private _core;
     private _machine;
     private _state;
     private _context;
     private _currentIndex;
-    constructor(core: Hypercore, machine: T);
+    private _eager;
+    constructor(core: Hypercore, machine: T, opts?: HyperstateOptions);
     _open(): Promise<void>;
     _close(): Promise<void>;
     action<E extends ExtractEvents<T>>(event: E, value?: ExtractActionParams<T, E extends string ? E : never>): Promise<{

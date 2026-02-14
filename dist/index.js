@@ -16,13 +16,15 @@ export function inferActions(machine) {
     return result;
 }
 export class Hyperstate extends ReadyResource {
-    constructor(core, machine) {
+    constructor(core, machine, opts = {}) {
         super();
         this._currentIndex = null;
+        this._eager = false;
         this._core = core;
         this._machine = machine;
         this._state = machine.initial;
         this._context = machine.context;
+        this._eager = Boolean(opts.eager);
     }
     async _open() {
         await this._core.ready();
@@ -30,6 +32,9 @@ export class Hyperstate extends ReadyResource {
             const lastState = await this._core.get(this._core.length - 1);
             this._state = lastState.state;
             this._context = lastState.context;
+            if (this._eager) {
+                this.emit("stateChange", { newState: this._context });
+            }
         }
     }
     async _close() {
