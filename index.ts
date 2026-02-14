@@ -131,6 +131,11 @@ export class Hyperstate<
       this._state = lastState.state;
       this._context = lastState.context;
 
+      const currentState = this._machine.states[this._state];
+      if (currentState?.on.start?.target) {
+        this._state = currentState.on.start.target;
+      }
+
       if (this._eager) {
         this.emit("stateChange", { newState: this._context });
       }

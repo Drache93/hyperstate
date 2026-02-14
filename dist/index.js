@@ -32,6 +32,10 @@ export class Hyperstate extends ReadyResource {
             const lastState = await this._core.get(this._core.length - 1);
             this._state = lastState.state;
             this._context = lastState.context;
+            const currentState = this._machine.states[this._state];
+            if (currentState?.on.start?.target) {
+                this._state = currentState.on.start.target;
+            }
             if (this._eager) {
                 this.emit("stateChange", { newState: this._context });
             }
