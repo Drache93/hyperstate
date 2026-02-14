@@ -166,7 +166,9 @@ export class Hyperstate<
         context: this._context,
       });
       this._state = (transition.target as ExtractStates<T>) || this._state;
-      this.emit("stateChange", { newState: this._context, oldState });
+      if (transition.target) {
+        this.emit("stateChange", { newState: this._context, oldState });
+      }
 
       return {
         state: this._state,

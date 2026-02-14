@@ -56,7 +56,9 @@ export class Hyperstate extends ReadyResource {
                 context: this._context,
             });
             this._state = transition.target || this._state;
-            this.emit("stateChange", { newState: this._context, oldState });
+            if (transition.target) {
+                this.emit("stateChange", { newState: this._context, oldState });
+            }
             return {
                 state: this._state,
                 context: this._context,
