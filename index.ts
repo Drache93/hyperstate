@@ -99,6 +99,10 @@ export type Infer<T extends MachineConfig<any, any>> = ReturnType<
   typeof inferActions<T>
 >;
 
+interface HyperstateOptions {
+  eager?: boolean;
+}
+
 export class Hyperstate<
   T extends MachineConfig<any, any>,
 > extends ReadyResource {
@@ -107,13 +111,15 @@ export class Hyperstate<
   private _state: ExtractStates<T>;
   private _context: ExtractContext<T>;
   private _currentIndex: number | null = null;
+  private _eager = false;
 
-  constructor(core: Hypercore, machine: T) {
+  constructor(core: Hypercore, machine: T, opts: HyperstateOptions = {}) {
     super();
     this._core = core;
     this._machine = machine;
     this._state = machine.initial as any;
     this._context = machine.context;
+    this._eager = Boolean(opts.eager);
   }
 
   async _open() {
@@ -124,6 +130,10 @@ export class Hyperstate<
         await this._core.get(this._core.length - 1);
       this._state = lastState.state;
       this._context = lastState.context;
+
+      if (this._eager) {
+        this.emit("stateChange", { newState: this._context });
+      }
     }
   }
 
