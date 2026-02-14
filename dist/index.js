@@ -46,15 +46,16 @@ export class Hyperstate extends ReadyResource {
     }
     async action(event, value) {
         const currentState = this._machine.states[this._state];
-        const transition = currentState?.on[event];
+        const transition = currentState?.on[event] ||
+            this._machine.states.all?.[event];
         if (transition) {
             const oldState = structuredClone(this._context);
             await transition.action(this._context, value);
             await this._core.append({
-                state: transition.target,
+                state: transition.target || this._state,
                 context: this._context,
             });
-            this._state = transition.target;
+            this._state = transition.target || this._state;
             this.emit("stateChange", { newState: this._context, oldState });
             return {
                 state: this._state,

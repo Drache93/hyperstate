@@ -154,16 +154,18 @@ export class Hyperstate<
     context: ExtractContext<T>;
   }> {
     const currentState = this._machine.states[this._state];
-    const transition = currentState?.on[event as string];
+    const transition =
+      currentState?.on[event as string] ||
+      this._machine.states.all?.[event as string];
 
     if (transition) {
       const oldState = structuredClone(this._context);
       await transition.action(this._context, value);
       await this._core.append({
-        state: transition.target,
+        state: transition.target || this._state,
         context: this._context,
       });
-      this._state = transition.target as ExtractStates<T>;
+      this._state = (transition.target as ExtractStates<T>) || this._state;
       this.emit("stateChange", { newState: this._context, oldState });
 
       return {
