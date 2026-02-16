@@ -135,6 +135,9 @@ export class Hyperstate<
       if (currentState?.on.start?.target) {
         this._state = currentState.on.start.target;
       }
+      if (currentState?.on.start?.action) {
+        await currentState.on.start.action(this._context, this._state);
+      }
 
       if (this._eager) {
         this.emit("stateChange", { newState: this._context });
