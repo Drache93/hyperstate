@@ -26,22 +26,24 @@
   ],
   "scripts": {
     "build": "tsc",
-    "test": "bun run test-runtime.ts",
-    "test:types": "bun tsc --noEmit test-types.ts",
+    "test": "bun run tests/runtime.ts",
+    "test:types": "bun tsc --noEmit tests/types.ts",
     "test:all": "bun run test:types && bun run test"
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "@types/streamx": "^2.9.5",
     "corestore": "^7.4.5",
     "deep-object-diff": "^1.1.9",
     "tsd": "^0.33.0"
   },
   "peerDependencies": {
-    "typescript": "^5",
-    "holepunch-types": "github:Drache93/holepunch-types#main"
+    "holepunch-types": "github:Drache93/holepunch-types#main",
+    "typescript": "^5"
   },
   "dependencies": {
     "hypercore": "^11.16.0",
-    "ready-resource": "^1.2.0"
+    "ready-resource": "^1.2.0",
+    "streamx": "^2.23.0"
   }
 }

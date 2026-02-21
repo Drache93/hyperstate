@@ -1,4 +1,4 @@
-import ReadyResource from "ready-resource";
+import { Duplex } from "streamx";
 // Improved createMachine function with better type inference
 export function createMachine(config) {
     return config;
@@ -6,16 +6,16 @@ export function createMachine(config) {
 // Utility function to infer action types and payloads
 export function inferActions(machine) {
     const result = {};
-    // Collect all event names from all states
+    // Collect all action names from all states
     for (const stateName in machine.states) {
         const state = machine.states[stateName];
-        for (const eventName in state.on) {
-            result[eventName] = undefined; // Placeholder for type inference
+        for (const action in state.on) {
+            result[action] = undefined; // Placeholder for type inference
         }
     }
     return result;
 }
-export class Hyperstate extends ReadyResource {
+export class Hyperstate extends Duplex {
     constructor(core, machine, opts = {}) {
         super();
         this._currentIndex = null;
@@ -23,59 +23,62 @@ export class Hyperstate extends ReadyResource {
         this._core = core;
         this._machine = machine;
         this._state = machine.initial;
-        this._context = machine.context;
+        this._context = structuredClone(machine.context);
         this._eager = Boolean(opts.eager);
     }
-    async _open() {
-        await this._core.ready();
-        if (this._core.length > 0) {
-            const lastState = await this._core.get(this._core.length - 1);
-            this._state = lastState.state;
-            this._context = lastState.context;
-            const currentState = this._machine.states[this._state];
-            if (currentState?.on.start?.target) {
-                this._state = currentState.on.start.target;
+    _open(cb) {
+        this._core
+            .ready()
+            .then(async () => {
+            if (this._core.length > 0) {
+                const lastState = await this._core.get(this._core.length - 1);
+                this._state = lastState.state;
+                this._context = lastState.context;
+                const currentState = this._machine.states[this._state];
+                if (currentState?.on.start?.target) {
+                    this._state = currentState.on.start.target;
+                }
+                if (currentState?.on.start?.action) {
+                    await currentState.on.start.action(this._context, this._state);
+                }
+                if (this._eager) {
+                    // @ts-ignore
+                    this.push({ state: this._state, context: this._context });
+                }
             }
-            if (currentState?.on.start?.action) {
-                await currentState.on.start.action(this._context, this._state);
-            }
-            if (this._eager) {
-                this.emit("stateChange", { newState: this._context });
-            }
-        }
+            cb();
+        })
+            .catch(cb);
     }
-    async _close() {
-        await this._core.close();
+    _write(chunk, cb) {
+        this.action(chunk.action, chunk.value).then(() => cb(), cb);
     }
-    async action(event, value) {
+    _read(cb) {
+        cb();
+    }
+    _destroy(cb) {
+        this._core.close().then(() => cb(), cb);
+    }
+    async action(action, value) {
         const currentState = this._machine.states[this._state];
-        const transition = currentState?.on[event] ||
-            this._machine.states.all?.[event];
-        if (transition) {
-            const oldState = structuredClone(this._context);
-            await transition.action(this._context, value);
-            await this._core.append({
-                state: transition.target || this._state,
-                context: this._context,
-            });
-            this._state = transition.target || this._state;
-            if (transition.target) {
-                this.emit("stateChange", { newState: this._context, oldState });
-            }
-            return {
-                state: this._state,
-                context: this._context,
-            };
+        const transition = currentState?.on[action] ||
+            this._machine.states.all?.[action];
+        if (!transition) {
+            throw new Error(`Invalid action: ${String(action)} for state ${this._state}`);
         }
-        else {
-            throw new Error(`Invalid action: ${String(event)} for state ${this._state}`);
+        const oldState = structuredClone(this._context);
+        await transition.action(this._context, value);
+        await this._core.append({
+            state: transition.target || this._state,
+            context: this._context,
+        });
+        this._state = transition.target || this._state;
+        if (transition.target) {
+            // @ts-ignore
+            this.push({ state: this._state, context: this._context });
         }
+        return { state: this._state, context: this._context };
     }
-    /*
-     * Move forward in the history
-     *
-     * Will replace the current state with the next state in the history.
-     */
     async forward() {
         const newIndex = this._currentIndex === null
             ? this._core.length - 2
@@ -87,11 +90,6 @@ export class Hyperstate extends ReadyResource {
             this._currentIndex = newIndex;
         }
     }
-    /*
-     * Move backward in the history.
-     *
-     * Will replace the current state with the previous state in the history.
-     */
     async backward() {
         const newIndex = this._currentIndex === null
             ? this._core.length - 2
@@ -115,7 +113,6 @@ export class Hyperstate extends ReadyResource {
     get isEmpty() {
         return this._core.length === 0;
     }
-    // Helper method to get available actions for current state
     getAvailableActions() {
         const currentState = this._machine.states[this._state];
         return Object.keys(currentState?.on || {});

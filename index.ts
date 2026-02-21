@@ -1,5 +1,5 @@
-import ReadyResource from "ready-resource";
 import Hypercore from "hypercore";
+import { Duplex } from "streamx";
 
 // Core type definitions with proper generic constraints
 export type MachineConfig<
@@ -30,14 +30,14 @@ export type ExtractContext<T> =
 export type ExtractStates<T> =
   T extends MachineConfig<any, infer S> ? keyof S : never;
 
-type ExtractEvents<T> =
+type ExtractActions<T> =
   T extends MachineConfig<any, infer S>
     ? S extends Record<string, { on: Record<infer E, any> }>
       ? E
       : never
     : never;
 
-// Extract action parameter types for specific events
+// Extract action parameter types for specific actions
 type ExtractActionParams<T, E extends string> =
   T extends MachineConfig<any, infer S>
     ? {
@@ -55,7 +55,7 @@ type ExtractActionParams<T, E extends string> =
 type ExtractActionSignatures<T> =
   T extends MachineConfig<any, infer S>
     ? {
-        [K in ExtractEvents<T>]: ExtractActionParams<
+        [K in ExtractActions<T>]: ExtractActionParams<
           T,
           K extends string ? K : never
         > extends never
@@ -84,11 +84,11 @@ export function inferActions<T extends MachineConfig<any, any>>(
 ): ExtractActionSignatures<T> {
   const result = {} as any;
 
-  // Collect all event names from all states
+  // Collect all action names from all states
   for (const stateName in machine.states) {
     const state = machine.states[stateName];
-    for (const eventName in state.on) {
-      result[eventName] = undefined; // Placeholder for type inference
+    for (const action in state.on) {
+      result[action] = undefined; // Placeholder for type inference
     }
   }
 
@@ -99,13 +99,27 @@ export type Infer<T extends MachineConfig<any, any>> = ReturnType<
   typeof inferActions<T>
 >;
 
+export type ActionMessage<T extends MachineConfig<any, any>> = {
+  [E in ExtractActions<T> & string]: ExtractActionParams<T, E> extends never
+    ? { action: E; value?: undefined }
+    : undefined extends ExtractActionParams<T, E>
+      ? { action: E; value?: ExtractActionParams<T, E> }
+      : { action: E; value: ExtractActionParams<T, E> };
+}[ExtractActions<T> & string];
+
+export type StateMessage<T extends MachineConfig<any, any>> = {
+  state: ExtractStates<T>;
+  context: ExtractContext<T>;
+};
+
 interface HyperstateOptions {
   eager?: boolean;
 }
 
-export class Hyperstate<
-  T extends MachineConfig<any, any>,
-> extends ReadyResource {
+export class Hyperstate<T extends MachineConfig<any, any>> extends Duplex<
+  ActionMessage<T>,
+  StateMessage<T>
+> {
   private _core: Hypercore;
   private _machine: T;
   private _state: ExtractStates<T>;
@@ -118,39 +132,54 @@ export class Hyperstate<
     this._core = core;
     this._machine = machine;
     this._state = machine.initial as any;
-    this._context = machine.context;
+    this._context = structuredClone(machine.context);
     this._eager = Boolean(opts.eager);
   }
 
-  async _open() {
-    await this._core.ready();
+  _open(cb: (err?: Error | null) => void) {
+    this._core
+      .ready()
+      .then(async () => {
+        if (this._core.length > 0) {
+          const lastState: {
+            state: ExtractStates<T>;
+            context: ExtractContext<T>;
+          } = await this._core.get(this._core.length - 1);
+          this._state = lastState.state;
+          this._context = lastState.context;
 
-    if (this._core.length > 0) {
-      const lastState: { state: ExtractStates<T>; context: ExtractContext<T> } =
-        await this._core.get(this._core.length - 1);
-      this._state = lastState.state;
-      this._context = lastState.context;
+          const currentState = this._machine.states[this._state];
+          if (currentState?.on.start?.target) {
+            this._state = currentState.on.start.target;
+          }
+          if (currentState?.on.start?.action) {
+            await currentState.on.start.action(this._context, this._state);
+          }
 
-      const currentState = this._machine.states[this._state];
-      if (currentState?.on.start?.target) {
-        this._state = currentState.on.start.target;
-      }
-      if (currentState?.on.start?.action) {
-        await currentState.on.start.action(this._context, this._state);
-      }
-
-      if (this._eager) {
-        this.emit("stateChange", { newState: this._context });
-      }
-    }
+          if (this._eager) {
+            // @ts-ignore
+            this.push({ state: this._state, context: this._context });
+          }
+        }
+        cb();
+      })
+      .catch(cb);
   }
 
-  async _close() {
-    await this._core.close();
+  _write(chunk: ActionMessage<T>, cb: (err?: Error | null) => void) {
+    this.action(chunk.action, chunk.value).then(() => cb(), cb);
   }
 
-  async action<E extends ExtractEvents<T>>(
-    event: E,
+  _read(cb: (err?: Error | null) => void) {
+    cb();
+  }
+
+  _destroy(cb: (err?: Error | null) => void) {
+    this._core.close().then(() => cb(), cb);
+  }
+
+  async action<E extends ExtractActions<T>>(
+    action: E,
     value?: ExtractActionParams<T, E extends string ? E : never>,
   ): Promise<{
     state: ExtractStates<T>;
@@ -158,37 +187,31 @@ export class Hyperstate<
   }> {
     const currentState = this._machine.states[this._state];
     const transition =
-      currentState?.on[event as string] ||
-      this._machine.states.all?.[event as string];
+      currentState?.on[action as string] ||
+      this._machine.states.all?.[action as string];
 
-    if (transition) {
-      const oldState = structuredClone(this._context);
-      await transition.action(this._context, value);
-      await this._core.append({
-        state: transition.target || this._state,
-        context: this._context,
-      });
-      this._state = (transition.target as ExtractStates<T>) || this._state;
-      if (transition.target) {
-        this.emit("stateChange", { newState: this._context, oldState });
-      }
-
-      return {
-        state: this._state,
-        context: this._context,
-      };
-    } else {
+    if (!transition) {
       throw new Error(
-        `Invalid action: ${String(event)} for state ${this._state as string}`,
+        `Invalid action: ${String(action)} for state ${this._state as string}`,
       );
     }
+
+    const oldState = structuredClone(this._context);
+    await transition.action(this._context, value);
+    await this._core.append({
+      state: transition.target || this._state,
+      context: this._context,
+    });
+    this._state = (transition.target as ExtractStates<T>) || this._state;
+
+    if (transition.target) {
+      // @ts-ignore
+      this.push({ state: this._state, context: this._context });
+    }
+
+    return { state: this._state, context: this._context };
   }
 
-  /*
-   * Move forward in the history
-   *
-   * Will replace the current state with the next state in the history.
-   */
   async forward() {
     const newIndex =
       this._currentIndex === null
@@ -203,11 +226,6 @@ export class Hyperstate<
     }
   }
 
-  /*
-   * Move backward in the history.
-   *
-   * Will replace the current state with the previous state in the history.
-   */
   async backward() {
     const newIndex =
       this._currentIndex === null
@@ -238,9 +256,8 @@ export class Hyperstate<
     return this._core.length === 0;
   }
 
-  // Helper method to get available actions for current state
-  getAvailableActions(): Array<ExtractEvents<T>> {
+  getAvailableActions(): Array<ExtractActions<T>> {
     const currentState = this._machine.states[this._state];
-    return Object.keys(currentState?.on || {}) as Array<ExtractEvents<T>>;
+    return Object.keys(currentState?.on || {}) as Array<ExtractActions<T>>;
   }
 }

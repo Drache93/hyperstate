@@ -10,7 +10,6 @@
     "outDir": "dist",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
-    "allowImportingTsExtensions": true,
     "noEmit": false,
     "forceConsistentCasingInFileNames": true,
     "useDefineForClassFields": false,
@@ -21,9 +20,9 @@
     "noUnusedParameters": false,
     "typeRoots": [
       "./node_modules/@types",
-      "./node_modules/holepunch-types/@types"
-    ]
+      "./node_modules/holepunch-types/@types",
+    ],
   },
   "include": ["index.ts", "test-types.ts", "test-runtime.ts", "demo.ts"],
-  "exclude": ["node_modules", "build", "dist"]
+  "exclude": ["node_modules", "build", "dist"],
 }
