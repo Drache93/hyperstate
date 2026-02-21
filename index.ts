@@ -192,6 +192,7 @@ export class Coremachine<T extends MachineConfig<any, any>> extends Duplex<
     state: ExtractStates<T>;
     context: ExtractContext<T>;
   }> {
+    const previousState = this._state;
     const currentState = this._machine.states[this._state];
     const transition =
       currentState?.on[action as string] ||
@@ -212,7 +213,11 @@ export class Coremachine<T extends MachineConfig<any, any>> extends Duplex<
 
     if (transition.target) {
       // @ts-ignore
-      this.push({ state: this._state, context: this._context });
+      this.push({
+        previousState,
+        state: this._state,
+        context: this._context,
+      });
     }
 
     return { state: this._state, context: this._context };
