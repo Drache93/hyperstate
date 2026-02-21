@@ -108,6 +108,7 @@ export type ActionMessage<T extends MachineConfig<any, any>> = {
 }[ExtractActions<T> & string];
 
 export type StateMessage<T extends MachineConfig<any, any>> = {
+  previousState?: ExtractStates<T>;
   state: ExtractStates<T>;
   context: ExtractContext<T>;
 };
@@ -158,7 +159,11 @@ export class Coremachine<T extends MachineConfig<any, any>> extends Duplex<
 
           if (this._eager) {
             // @ts-ignore
-            this.push({ state: this._state, context: this._context });
+            this.push({
+              previousState: lastState.state,
+              state: this._state,
+              context: this._context,
+            });
           }
         }
         cb();
@@ -167,7 +172,9 @@ export class Coremachine<T extends MachineConfig<any, any>> extends Duplex<
   }
 
   _write(chunk: ActionMessage<T>, cb: (err?: Error | null) => void) {
-    this.action(chunk.action, chunk.value).then(() => cb(), cb);
+    this.action(chunk.action, chunk.value)
+      .then(() => cb())
+      .catch((e) => cb(e));
   }
 
   _read(cb: (err?: Error | null) => void) {
@@ -196,7 +203,6 @@ export class Coremachine<T extends MachineConfig<any, any>> extends Duplex<
       );
     }
 
-    const oldState = structuredClone(this._context);
     await transition.action(this._context, value);
     await this._core.append({
       state: transition.target || this._state,
