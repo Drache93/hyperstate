@@ -1,5 +1,5 @@
 import Corestore from "corestore";
-import { Punchcard, createMachine } from "./dist/index.js";
+import { Coremachine, createMachine } from "./dist/index.js";
 
 const todoMachine = createMachine({
   initial: "idle",
@@ -63,14 +63,14 @@ const todoMachine = createMachine({
 });
 
 const store = new Corestore("./store1");
-const punchcard = new Punchcard(
-  store.get({ name: "punchcard", valueEncoding: "json" }),
+const coremachine = new Coremachine(
+  store.get({ name: "coremachine", valueEncoding: "json" }),
   todoMachine,
 );
 
-punchcard.on("data", (data) => {
+coremachine.on("data", (data) => {
   // every time you run this script you'll see more todos!
   console.log("state changed!", data);
 });
 
-punchcard.write({ action: "ADD_TODO", value: { todo: { text: "hello!" } } });
+coremachine.write({ action: "ADD_TODO", value: { todo: { text: "hello!" } } });

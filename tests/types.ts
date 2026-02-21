@@ -1,6 +1,6 @@
 import {
   createMachine,
-  Punchcard,
+  Coremachine,
   inferActions,
   MachineConfig,
 } from "../index";
@@ -120,19 +120,21 @@ const complexMachine = createMachine({
   },
 });
 
-// Test 3: Type inference for Punchcard class
+// Test 3: Type inference for Coremachine class
 type BasicMachineType = typeof basicMachine;
-declare const punchcard: Punchcard<BasicMachineType>;
+declare const coremachine: Coremachine<BasicMachineType>;
 
 // Test context type
 expectType<{
   count: number;
   name: string;
   active: boolean;
-}>(punchcard.context);
+}>(coremachine.context);
 
 // Test available actions
-expectType<("START" | "INCREMENT" | "STOP")[]>(punchcard.getAvailableActions());
+expectType<("START" | "INCREMENT" | "STOP")[]>(
+  coremachine.getAvailableActions(),
+);
 
 // Test 4: Action signatures inference
 type BasicActions = ReturnType<typeof inferActions<typeof basicMachine>>;
@@ -192,7 +194,7 @@ async function testUsage() {
 
   // Mock hypercore for testing
   const mockCore = {} as any;
-  const state = new Punchcard(mockCore, machine);
+  const state = new Coremachine(mockCore, machine);
 
   // These should be properly typed
   expectType<number>(state.context.value);

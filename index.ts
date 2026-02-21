@@ -112,11 +112,11 @@ export type StateMessage<T extends MachineConfig<any, any>> = {
   context: ExtractContext<T>;
 };
 
-interface PunchcardOptions {
+interface CoremachineOptions {
   eager?: boolean;
 }
 
-export class Punchcard<T extends MachineConfig<any, any>> extends Duplex<
+export class Coremachine<T extends MachineConfig<any, any>> extends Duplex<
   ActionMessage<T>,
   StateMessage<T>
 > {
@@ -127,7 +127,7 @@ export class Punchcard<T extends MachineConfig<any, any>> extends Duplex<
   private _currentIndex: number | null = null;
   private _eager = false;
 
-  constructor(core: Hypercore, machine: T, opts: PunchcardOptions = {}) {
+  constructor(core: Hypercore, machine: T, opts: CoremachineOptions = {}) {
     super();
     this._core = core;
     this._machine = machine;

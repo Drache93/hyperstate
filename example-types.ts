@@ -1,4 +1,4 @@
-import { createMachine, Punchcard, Infer } from "./index";
+import { createMachine, Coremachine, Infer } from "./index";
 
 // Demo: Creating a typed state machine
 const todoMachine = createMachine({
@@ -74,19 +74,19 @@ type TodoActions = Infer<typeof todoMachine>;
 // }
 
 // Function that safely works with the machine
-function createTodoHelper(punchcard: Punchcard<typeof todoMachine>) {
-  const currentState = punchcard.state;
+function createTodoHelper(coremachine: Coremachine<typeof todoMachine>) {
+  const currentState = coremachine.state;
 
   return {
-    addTodo: (text: string) => punchcard.action("ADD_TODO", { text }),
+    addTodo: (text: string) => coremachine.action("ADD_TODO", { text }),
 
-    toggleTodo: (id: string) => punchcard.action("TOGGLE_TODO", id),
+    toggleTodo: (id: string) => coremachine.action("TOGGLE_TODO", id),
 
     setFilter: (filter: "all" | "active" | "completed") =>
-      punchcard.action("SET_FILTER", filter),
+      coremachine.action("SET_FILTER", filter),
 
     getFilteredTodos: () => {
-      const { todos, filter } = punchcard.context;
+      const { todos, filter } = coremachine.context;
       switch (filter) {
         case "active":
           return todos.filter((t) => !t.completed);
@@ -99,9 +99,9 @@ function createTodoHelper(punchcard: Punchcard<typeof todoMachine>) {
 
     // Type-safe access to context
     getStats: () => ({
-      total: punchcard.context.todos.length,
-      completed: punchcard.context.todos.filter((t) => t.completed).length,
-      active: punchcard.context.todos.filter((t) => !t.completed).length,
+      total: coremachine.context.todos.length,
+      completed: coremachine.context.todos.filter((t) => t.completed).length,
+      active: coremachine.context.todos.filter((t) => !t.completed).length,
     }),
   };
 }

@@ -1,8 +1,8 @@
-# Punchcard
+# Coremachine
 
-A type-safe state machine built on top of Hypercore for distributed, append-only state management. Punchcard combines the power of state machines with the reliability and synchronization capabilities of Hypercore, making it perfect for building distributed applications that need consistent state across multiple peers.
+A type-safe state machine built on top of Hypercore for distributed, append-only state management. Coremachine combines the power of state machines with the reliability and synchronization capabilities of Hypercore, making it perfect for building distributed applications that need consistent state across multiple peers.
 
-Punchcard extends a Duplex stream — write actions in, read state changes out.
+Coremachine extends a Duplex stream — write actions in, read state changes out.
 
 ## Features
 
@@ -16,14 +16,14 @@ Punchcard extends a Duplex stream — write actions in, read state changes out.
 ## Installation
 
 ```bash
-npm install punchcard
+npm install coremachine
 ```
 
 ## Quick Start
 
 ```javascript
 import Corestore from "corestore";
-import { createMachine, Punchcard } from "punchcard";
+import { createMachine, Coremachine } from "coremachine";
 
 // Define your state machine
 const definition = createMachine({
@@ -66,10 +66,10 @@ const definition = createMachine({
   },
 });
 
-// Initialize Punchcard
+// Initialize Coremachine
 const store = new Corestore("./store");
-const cube = new Punchcard(
-  store.get({ name: "punchcard", valueEncoding: "json" }),
+const cube = new Coremachine(
+  store.get({ name: "coremachine", valueEncoding: "json" }),
   definition,
 );
 
@@ -115,10 +115,10 @@ const definition = createMachine({
 
 ### Duplex Stream Interface
 
-Punchcard is a Duplex stream. The writable side accepts actions, the readable side emits state changes:
+Coremachine is a Duplex stream. The writable side accepts actions, the readable side emits state changes:
 
 ```javascript
-const cube = new Punchcard(core, definition);
+const cube = new Coremachine(core, definition);
 
 // Write side — type-safe action messages
 cube.write({ event: "START", value: 1 });
@@ -160,9 +160,9 @@ Creates a state machine definition.
 
 **Returns:** Machine definition object
 
-### `new Punchcard(hypercore, definition, opts?)`
+### `new Coremachine(hypercore, definition, opts?)`
 
-Creates a new Punchcard instance (a Duplex stream).
+Creates a new Coremachine instance (a Duplex stream).
 
 **Parameters:**
 - `hypercore`: A Hypercore instance with JSON encoding
@@ -237,19 +237,19 @@ cube.on("data", ({ state, context }) => {
 
 ### Distributed State Synchronization
 
-Since Punchcard is built on Hypercore, multiple instances can synchronize automatically:
+Since Coremachine is built on Hypercore, multiple instances can synchronize automatically:
 
 ```javascript
 // Peer A
 const storeA = new Corestore("./storeA");
-const cubeA = new Punchcard(
-  storeA.get({ name: "punchcard", valueEncoding: "json" }),
+const cubeA = new Coremachine(
+  storeA.get({ name: "coremachine", valueEncoding: "json" }),
   definition
 );
 
 // Peer B
 const storeB = new Corestore("./storeB");
-const cubeB = new Punchcard(
+const cubeB = new Coremachine(
   storeB.get({ key: storeA.key, valueEncoding: "json" }),
   definition
 );
@@ -257,7 +257,7 @@ const cubeB = new Punchcard(
 
 ### Piping
 
-Since Punchcard is a standard Duplex stream, it composes with the rest of the streaming ecosystem:
+Since Coremachine is a standard Duplex stream, it composes with the rest of the streaming ecosystem:
 
 ```javascript
 // Pipe actions from one source into the cube
