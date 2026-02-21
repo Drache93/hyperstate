@@ -50,17 +50,17 @@ export type StateMessage<T extends MachineConfig<any, any>> = {
     state: ExtractStates<T>;
     context: ExtractContext<T>;
 };
-interface HyperstateOptions {
+interface HypercubeOptions {
     eager?: boolean;
 }
-export declare class Hyperstate<T extends MachineConfig<any, any>> extends Duplex<ActionMessage<T>, StateMessage<T>> {
+export declare class Hypercube<T extends MachineConfig<any, any>> extends Duplex<ActionMessage<T>, StateMessage<T>> {
     private _core;
     private _machine;
     private _state;
     private _context;
     private _currentIndex;
     private _eager;
-    constructor(core: Hypercore, machine: T, opts?: HyperstateOptions);
+    constructor(core: Hypercore, machine: T, opts?: HypercubeOptions);
     _open(cb: (err?: Error | null) => void): void;
     _write(chunk: ActionMessage<T>, cb: (err?: Error | null) => void): void;
     _read(cb: (err?: Error | null) => void): void;

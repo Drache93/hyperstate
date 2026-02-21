@@ -15,7 +15,7 @@ export function inferActions(machine) {
     }
     return result;
 }
-export class Hyperstate extends Duplex {
+export class Hypercube extends Duplex {
     constructor(core, machine, opts = {}) {
         super();
         this._currentIndex = null;
