@@ -2,7 +2,7 @@ import { createMachine, inferActions } from "../index";
 
 // Runtime test to verify everything works
 async function runTests() {
-  console.log("🧪 Running Hypercube type safety tests...\n");
+  console.log("🧪 Running Punchcard type safety tests...\n");
 
   // Test 1: Basic functionality with typed context
   const counterMachine = createMachine({

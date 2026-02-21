@@ -1,6 +1,6 @@
 import {
   createMachine,
-  Hypercube,
+  Punchcard,
   inferActions,
   MachineConfig,
 } from "../index";
@@ -120,19 +120,19 @@ const complexMachine = createMachine({
   },
 });
 
-// Test 3: Type inference for Hypercube class
+// Test 3: Type inference for Punchcard class
 type BasicMachineType = typeof basicMachine;
-declare const hypercube: Hypercube<BasicMachineType>;
+declare const punchcard: Punchcard<BasicMachineType>;
 
 // Test context type
 expectType<{
   count: number;
   name: string;
   active: boolean;
-}>(hypercube.context);
+}>(punchcard.context);
 
 // Test available actions
-expectType<("START" | "INCREMENT" | "STOP")[]>(hypercube.getAvailableActions());
+expectType<("START" | "INCREMENT" | "STOP")[]>(punchcard.getAvailableActions());
 
 // Test 4: Action signatures inference
 type BasicActions = ReturnType<typeof inferActions<typeof basicMachine>>;
@@ -192,7 +192,7 @@ async function testUsage() {
 
   // Mock hypercore for testing
   const mockCore = {} as any;
-  const state = new Hypercube(mockCore, machine);
+  const state = new Punchcard(mockCore, machine);
 
   // These should be properly typed
   expectType<number>(state.context.value);

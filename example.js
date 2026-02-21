@@ -1,5 +1,5 @@
 import Corestore from "corestore";
-import { Hypercube, createMachine } from "./dist/index.js";
+import { Punchcard, createMachine } from "./dist/index.js";
 
 const todoMachine = createMachine({
   initial: "idle",
@@ -63,14 +63,14 @@ const todoMachine = createMachine({
 });
 
 const store = new Corestore("./store1");
-const hypercube = new Hypercube(
-  store.get({ name: "hypercube", valueEncoding: "json" }),
+const punchcard = new Punchcard(
+  store.get({ name: "punchcard", valueEncoding: "json" }),
   todoMachine,
 );
 
-hypercube.on("data", (data) => {
+punchcard.on("data", (data) => {
   // every time you run this script you'll see more todos!
   console.log("state changed!", data);
 });
 
-hypercube.write({ action: "ADD_TODO", value: { todo: { text: "hello!" } } });
+punchcard.write({ action: "ADD_TODO", value: { todo: { text: "hello!" } } });

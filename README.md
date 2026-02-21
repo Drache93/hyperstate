@@ -1,8 +1,8 @@
-# Hypercube
+# Punchcard
 
-A type-safe state machine built on top of Hypercore for distributed, append-only state management. Hypercube combines the power of state machines with the reliability and synchronization capabilities of Hypercore, making it perfect for building distributed applications that need consistent state across multiple peers.
+A type-safe state machine built on top of Hypercore for distributed, append-only state management. Punchcard combines the power of state machines with the reliability and synchronization capabilities of Hypercore, making it perfect for building distributed applications that need consistent state across multiple peers.
 
-Hypercube extends a Duplex stream — write actions in, read state changes out.
+Punchcard extends a Duplex stream — write actions in, read state changes out.
 
 ## Features
 
@@ -16,14 +16,14 @@ Hypercube extends a Duplex stream — write actions in, read state changes out.
 ## Installation
 
 ```bash
-npm install hypercube
+npm install punchcard
 ```
 
 ## Quick Start
 
 ```javascript
 import Corestore from "corestore";
-import { createMachine, Hypercube } from "hypercube";
+import { createMachine, Punchcard } from "punchcard";
 
 // Define your state machine
 const definition = createMachine({
@@ -66,10 +66,10 @@ const definition = createMachine({
   },
 });
 
-// Initialize Hypercube
+// Initialize Punchcard
 const store = new Corestore("./store");
-const cube = new Hypercube(
-  store.get({ name: "hypercube", valueEncoding: "json" }),
+const cube = new Punchcard(
+  store.get({ name: "punchcard", valueEncoding: "json" }),
   definition,
 );
 
@@ -115,10 +115,10 @@ const definition = createMachine({
 
 ### Duplex Stream Interface
 
-Hypercube is a Duplex stream. The writable side accepts actions, the readable side emits state changes:
+Punchcard is a Duplex stream. The writable side accepts actions, the readable side emits state changes:
 
 ```javascript
-const cube = new Hypercube(core, definition);
+const cube = new Punchcard(core, definition);
 
 // Write side — type-safe action messages
 cube.write({ event: "START", value: 1 });
@@ -160,9 +160,9 @@ Creates a state machine definition.
 
 **Returns:** Machine definition object
 
-### `new Hypercube(hypercore, definition, opts?)`
+### `new Punchcard(hypercore, definition, opts?)`
 
-Creates a new Hypercube instance (a Duplex stream).
+Creates a new Punchcard instance (a Duplex stream).
 
 **Parameters:**
 - `hypercore`: A Hypercore instance with JSON encoding
@@ -237,19 +237,19 @@ cube.on("data", ({ state, context }) => {
 
 ### Distributed State Synchronization
 
-Since Hypercube is built on Hypercore, multiple instances can synchronize automatically:
+Since Punchcard is built on Hypercore, multiple instances can synchronize automatically:
 
 ```javascript
 // Peer A
 const storeA = new Corestore("./storeA");
-const cubeA = new Hypercube(
-  storeA.get({ name: "hypercube", valueEncoding: "json" }),
+const cubeA = new Punchcard(
+  storeA.get({ name: "punchcard", valueEncoding: "json" }),
   definition
 );
 
 // Peer B
 const storeB = new Corestore("./storeB");
-const cubeB = new Hypercube(
+const cubeB = new Punchcard(
   storeB.get({ key: storeA.key, valueEncoding: "json" }),
   definition
 );
@@ -257,7 +257,7 @@ const cubeB = new Hypercube(
 
 ### Piping
 
-Since Hypercube is a standard Duplex stream, it composes with the rest of the streaming ecosystem:
+Since Punchcard is a standard Duplex stream, it composes with the rest of the streaming ecosystem:
 
 ```javascript
 // Pipe actions from one source into the cube
