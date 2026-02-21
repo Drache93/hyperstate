@@ -1,6 +1,8 @@
-# Hyperstate
+# Hypercube
 
-A type-safe state machine built on top of Hypercore for distributed, append-only state management. Hyperstate combines the power of state machines with the reliability and synchronization capabilities of Hypercore, making it perfect for building distributed applications that need consistent state across multiple peers.
+A type-safe state machine built on top of Hypercore for distributed, append-only state management. Hypercube combines the power of state machines with the reliability and synchronization capabilities of Hypercore, making it perfect for building distributed applications that need consistent state across multiple peers.
+
+Hypercube extends a Duplex stream — write actions in, read state changes out.
 
 ## Features
 
@@ -8,20 +10,20 @@ A type-safe state machine built on top of Hypercore for distributed, append-only
 - 🌐 **Distributed**: Built on Hypercore for peer-to-peer state synchronization
 - 📝 **Append-Only**: Immutable state history with complete audit trail
 - 🎯 **State Machine**: Predictable state transitions with guards and actions
-- 🔄 **Event-Driven**: React to state changes with built-in event emitters
+- 🔀 **Streamable**: Duplex stream interface — pipe actions in, pipe state out
 - 📦 **Lightweight**: Minimal dependencies, maximum functionality
 
 ## Installation
 
 ```bash
-npm install hyperstate
+npm install hypercube
 ```
 
 ## Quick Start
 
 ```javascript
 import Corestore from "corestore";
-import { createMachine, Hyperstate } from "hyperstate";
+import { createMachine, Hypercube } from "hypercube";
 
 // Define your state machine
 const definition = createMachine({
@@ -64,21 +66,24 @@ const definition = createMachine({
   },
 });
 
-// Initialize Hyperstate
+// Initialize Hypercube
 const store = new Corestore("./store");
-const hyperstate = new Hyperstate(
-  store.get({ name: "hyperstate", valueEncoding: "json" }),
+const cube = new Hypercube(
+  store.get({ name: "hypercube", valueEncoding: "json" }),
   definition,
 );
 
-await hyperstate.ready();
+// Call action directly
+await cube.action("START", 1);
+console.log(cube.state, cube.context); // "running", { running: true, counter: 1 }
 
-// Use the state machine
-await hyperstate.action("START", 1);
-console.log(hyperstate.state, hyperstate.context); // "running", { running: true, counter: 1 }
+// Or write actions into the stream
+cube.write({ event: "INCREMENT" });
 
-await hyperstate.action("INCREMENT");
-console.log(hyperstate.state, hyperstate.context); // "running", { running: true, counter: 2 }
+// Read state changes out
+cube.on("data", ({ state, context }) => {
+  console.log(state, context); // "running", { running: true, counter: 2 }
+});
 ```
 
 ## Core Concepts
@@ -108,6 +113,28 @@ const definition = createMachine({
 });
 ```
 
+### Duplex Stream Interface
+
+Hypercube is a Duplex stream. The writable side accepts actions, the readable side emits state changes:
+
+```javascript
+const cube = new Hypercube(core, definition);
+
+// Write side — type-safe action messages
+cube.write({ event: "START", value: 1 });
+cube.write({ event: "INCREMENT" });
+
+// Read side — typed state + context
+cube.on("data", ({ state, context }) => {
+  console.log(state, context);
+});
+
+// Pipe it
+actionSource.pipe(cube).pipe(stateConsumer);
+```
+
+The stream opens lazily on first read or write, restoring the latest state from the underlying Hypercore automatically.
+
 ### Actions and Transitions
 
 Actions are functions that modify the context when transitioning between states:
@@ -133,43 +160,59 @@ Creates a state machine definition.
 
 **Returns:** Machine definition object
 
-### `new Hyperstate(hypercore, definition)`
+### `new Hypercube(hypercore, definition, opts?)`
 
-Creates a new Hyperstate instance.
+Creates a new Hypercube instance (a Duplex stream).
 
 **Parameters:**
 - `hypercore`: A Hypercore instance with JSON encoding
 - `definition`: Machine definition from `createMachine()`
+- `opts.eager` (boolean): If `true`, push the current state immediately on open
 
 ### Instance Methods
 
-#### `await hyperstate.ready()`
+#### `await cube.action(eventName, payload?)`
 
-Wait for the Hyperstate instance to be ready for use.
-
-#### `await hyperstate.action(eventName, payload?)`
-
-Trigger a state transition.
+Trigger a state transition directly.
 
 **Parameters:**
 - `eventName` (string): The event to trigger
 - `payload` (any, optional): Data to pass to the action function
 
-#### Properties
+**Returns:** `{ state, context }` after the transition
 
-- `hyperstate.state` (string): Current state name
-- `hyperstate.context` (object): Current context data
-- `hyperstate.isEmpty` (boolean): Whether the hypercore is empty
+#### `cube.write({ event, value? })`
 
-### Events
+Write an action into the stream. Equivalent to calling `action()` but through the stream interface, with backpressure handled automatically.
 
-#### `stateChange`
+#### `await cube.forward()`
 
-Emitted when the state changes.
+Move forward in the state history.
+
+#### `await cube.backward()`
+
+Move backward in the state history.
+
+#### `cube.truncate(newLength)`
+
+Truncate the underlying Hypercore to a new length.
+
+### Properties
+
+- `cube.state` (string): Current state name
+- `cube.context` (object): Current context data
+- `cube.isEmpty` (boolean): Whether the hypercore is empty
+- `cube.getAvailableActions()` (array): Actions available in the current state
+
+### Stream Events
+
+#### `data`
+
+Emitted when the state changes. Each message contains the new state and context:
 
 ```javascript
-hyperstate.on("stateChange", ({ newState, oldState }) => {
-  console.log(`State changed from ${oldState} to ${newState}`);
+cube.on("data", ({ state, context }) => {
+  console.log(`Now in state: ${state}`, context);
 });
 ```
 
@@ -182,37 +225,49 @@ Use the `deep-object-diff` library to track specific changes:
 ```javascript
 import { diff } from "deep-object-diff";
 
-hyperstate.on("stateChange", ({ newState, oldState }) => {
-  const stateDiff = diff(oldState, newState);
-  console.log("Changes:", stateDiff);
-
-  // Send changes to your application
-  const data = Buffer.from(JSON.stringify(stateDiff));
-  // ... handle the diff
+let prev = null;
+cube.on("data", ({ state, context }) => {
+  if (prev) {
+    const changes = diff(prev, context);
+    console.log("Changes:", changes);
+  }
+  prev = structuredClone(context);
 });
 ```
 
-This approach lets you send just the changes to your application, rather than the entire state.
-
 ### Distributed State Synchronization
 
-Since Hyperstate is built on Hypercore, multiple instances can synchronize automatically:
+Since Hypercube is built on Hypercore, multiple instances can synchronize automatically:
 
 ```javascript
 // Peer A
 const storeA = new Corestore("./storeA");
-const hyperstateA = new Hyperstate(
-  storeA.get({ name: "hyperstate", valueEncoding: "json" }),
+const cubeA = new Hypercube(
+  storeA.get({ name: "hypercube", valueEncoding: "json" }),
   definition
 );
 
 // Peer B
 const storeB = new Corestore("./storeB");
-const hyperstateB = new Hyperstate(
+const cubeB = new Hypercube(
   storeB.get({ key: storeA.key, valueEncoding: "json" }),
   definition
 );
+```
 
+### Piping
+
+Since Hypercube is a standard Duplex stream, it composes with the rest of the streaming ecosystem:
+
+```javascript
+// Pipe actions from one source into the cube
+actionStream.pipe(cube);
+
+// Pipe state changes to a consumer
+cube.pipe(renderStream);
+
+// Full pipeline
+actionStream.pipe(cube).pipe(renderStream);
 ```
 
 ## Use Cases

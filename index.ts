@@ -112,11 +112,11 @@ export type StateMessage<T extends MachineConfig<any, any>> = {
   context: ExtractContext<T>;
 };
 
-interface HyperstateOptions {
+interface HypercubeOptions {
   eager?: boolean;
 }
 
-export class Hyperstate<T extends MachineConfig<any, any>> extends Duplex<
+export class Hypercube<T extends MachineConfig<any, any>> extends Duplex<
   ActionMessage<T>,
   StateMessage<T>
 > {
@@ -127,7 +127,7 @@ export class Hyperstate<T extends MachineConfig<any, any>> extends Duplex<
   private _currentIndex: number | null = null;
   private _eager = false;
 
-  constructor(core: Hypercore, machine: T, opts: HyperstateOptions = {}) {
+  constructor(core: Hypercore, machine: T, opts: HypercubeOptions = {}) {
     super();
     this._core = core;
     this._machine = machine;

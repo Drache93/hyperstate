@@ -1,4 +1,4 @@
-import { createMachine, Hyperstate, Infer } from "./index";
+import { createMachine, Hypercube, Infer } from "./index";
 
 // Demo: Creating a typed state machine
 const todoMachine = createMachine({
@@ -74,19 +74,19 @@ type TodoActions = Infer<typeof todoMachine>;
 // }
 
 // Function that safely works with the machine
-function createTodoHelper(hyperstate: Hyperstate<typeof todoMachine>) {
-  const currentState = hyperstate.state;
+function createTodoHelper(hypercube: Hypercube<typeof todoMachine>) {
+  const currentState = hypercube.state;
 
   return {
-    addTodo: (text: string) => hyperstate.action("ADD_TODO", { text }),
+    addTodo: (text: string) => hypercube.action("ADD_TODO", { text }),
 
-    toggleTodo: (id: string) => hyperstate.action("TOGGLE_TODO", id),
+    toggleTodo: (id: string) => hypercube.action("TOGGLE_TODO", id),
 
     setFilter: (filter: "all" | "active" | "completed") =>
-      hyperstate.action("SET_FILTER", filter),
+      hypercube.action("SET_FILTER", filter),
 
     getFilteredTodos: () => {
-      const { todos, filter } = hyperstate.context;
+      const { todos, filter } = hypercube.context;
       switch (filter) {
         case "active":
           return todos.filter((t) => !t.completed);
@@ -99,9 +99,9 @@ function createTodoHelper(hyperstate: Hyperstate<typeof todoMachine>) {
 
     // Type-safe access to context
     getStats: () => ({
-      total: hyperstate.context.todos.length,
-      completed: hyperstate.context.todos.filter((t) => t.completed).length,
-      active: hyperstate.context.todos.filter((t) => !t.completed).length,
+      total: hypercube.context.todos.length,
+      completed: hypercube.context.todos.filter((t) => t.completed).length,
+      active: hypercube.context.todos.filter((t) => !t.completed).length,
     }),
   };
 }

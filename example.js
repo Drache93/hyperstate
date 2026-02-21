@@ -1,5 +1,5 @@
 import Corestore from "corestore";
-import { Hyperstate, createMachine } from "./dist/index.js";
+import { Hypercube, createMachine } from "./dist/index.js";
 
 const todoMachine = createMachine({
   initial: "idle",
@@ -63,14 +63,14 @@ const todoMachine = createMachine({
 });
 
 const store = new Corestore("./store1");
-const hyperstate = new Hyperstate(
-  store.get({ name: "hyperstate", valueEncoding: "json" }),
+const hypercube = new Hypercube(
+  store.get({ name: "hypercube", valueEncoding: "json" }),
   todoMachine,
 );
 
-hyperstate.on("data", (data) => {
+hypercube.on("data", (data) => {
   // every time you run this script you'll see more todos!
   console.log("state changed!", data);
 });
 
-hyperstate.write({ action: "ADD_TODO", value: { todo: { text: "hello!" } } });
+hypercube.write({ action: "ADD_TODO", value: { todo: { text: "hello!" } } });

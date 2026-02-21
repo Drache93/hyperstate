@@ -1,6 +1,6 @@
 import {
   createMachine,
-  Hyperstate,
+  Hypercube,
   inferActions,
   MachineConfig,
 } from "../index";
@@ -120,21 +120,19 @@ const complexMachine = createMachine({
   },
 });
 
-// Test 3: Type inference for Hyperstate class
+// Test 3: Type inference for Hypercube class
 type BasicMachineType = typeof basicMachine;
-declare const hyperstate: Hyperstate<BasicMachineType>;
+declare const hypercube: Hypercube<BasicMachineType>;
 
 // Test context type
 expectType<{
   count: number;
   name: string;
   active: boolean;
-}>(hyperstate.context);
+}>(hypercube.context);
 
 // Test available actions
-expectType<("START" | "INCREMENT" | "STOP")[]>(
-  hyperstate.getAvailableActions(),
-);
+expectType<("START" | "INCREMENT" | "STOP")[]>(hypercube.getAvailableActions());
 
 // Test 4: Action signatures inference
 type BasicActions = ReturnType<typeof inferActions<typeof basicMachine>>;
@@ -194,7 +192,7 @@ async function testUsage() {
 
   // Mock hypercore for testing
   const mockCore = {} as any;
-  const state = new Hyperstate(mockCore, machine);
+  const state = new Hypercube(mockCore, machine);
 
   // These should be properly typed
   expectType<number>(state.context.value);
