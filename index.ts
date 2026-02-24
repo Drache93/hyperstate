@@ -211,14 +211,12 @@ export class Coremachine<T extends MachineConfig<any, any>> extends Duplex<
     });
     this._state = (transition.target as ExtractStates<T>) || this._state;
 
-    if (transition.target) {
-      // @ts-ignore
-      this.push({
-        previousState,
-        state: this._state,
-        context: this._context,
-      });
-    }
+    // @ts-ignore
+    this.push({
+      previousState,
+      state: this._state,
+      context: this._context,
+    });
 
     return { state: this._state, context: this._context };
   }
