@@ -141,11 +141,13 @@ export class Coremachine<T extends MachineConfig<any, any>> extends Duplex<
     this._core
       .ready()
       .then(async () => {
+        let lastState: {
+          state: ExtractStates<T>;
+          context: ExtractContext<T>;
+        } | null = null;
+
         if (this._core.length > 0) {
-          const lastState: {
-            state: ExtractStates<T>;
-            context: ExtractContext<T>;
-          } = await this._core.get(this._core.length - 1);
+          lastState = await this._core.get(this._core.length - 1);
           this._state = lastState.state;
           this._context = lastState.context;
 
@@ -156,15 +158,15 @@ export class Coremachine<T extends MachineConfig<any, any>> extends Duplex<
           if (currentState?.on.start?.action) {
             await currentState.on.start.action(this._context, this._state);
           }
+        }
 
-          if (this._eager) {
-            // @ts-ignore
-            this.push({
-              previousState: lastState.state,
-              state: this._state,
-              context: this._context,
-            });
-          }
+        if (this._eager) {
+          // @ts-ignore
+          this.push({
+            previousState: lastState?.state || null,
+            state: this._state,
+            context: this._context,
+          });
         }
         cb();
       })
